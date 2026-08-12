@@ -147,29 +147,44 @@ function showPage(name) {
   PAGE_HANDLERS[name]?.();
 }
 
+/**
+ * ==========================================
+ * ATUALIZAÇÃO DO PAINEL DE NOTIFICAÇÕES
+ * ==========================================
+ * Busca os alertas do sistema de forma assíncrona e atualiza o contador do sino
+ * e a lista suspensa com os avisos mais recentes.
+ */
 async function updateAlertsPanel() {
-  try {
+  try { 
+    // 1. Busca a lista atualizada de alertas/notificações no serviço de dados
     const alerts = await getAlerts();
+    // Captura os elementos visuais da interface (sino, contador e container da lista)
     const badge = document.getElementById('alert-nav-badge');
     const notifCount = document.getElementById('notif-count');
     const panel = document.getElementById('notif-items');
 
+    // 2. Atualiza a "bolinha" de notificação no menu superior
     if (badge) {
       badge.textContent = alerts.length;
+      // Mostra a bolinha se houver alertas (> 0); esconde se não houver nenhum
       badge.style.display = alerts.length ? 'inline-flex' : 'none';
     }
 
+    // 3. Atualiza o número do contador dentro do cabeçalho do painel
     if (notifCount) {
       notifCount.textContent = alerts.length;
     }
 
+    // Trava de segurança: se o elemento da lista não existir no HTML atual, encerra a função
     if (!panel) return;
 
+    // 4. Caso não haja alertas ativos, exibe a mensagem de estado vazio
     if (!alerts.length) {
       panel.innerHTML = `<div class="empty-state"><p>Sem notificações no momento.</p></div>`;
       return;
     }
 
+    // 5. Renderiza apenas as 3 notificações mais recentes no menu suspenso
     panel.innerHTML = alerts.slice(0, 3).map(alert => `
       <div class="tooltip-notif">
         <div class="tn-dot ${alert.type}"></div>
@@ -179,24 +194,40 @@ async function updateAlertsPanel() {
         </div>
       </div>`).join('');
   } catch (error) {
-    console.error('Failed to update notification panel', error);
+    // Captura eventuais falhas na busca de dados sem travar a navegação do usuário
+    console.error('Falha ao atualizar o painel de notificações', error);
   }
 }
 
+/**
+ * ==========================================
+ * PREENCHIMENTO DO MENU DROPDOWN DE PISCINAS
+ * ==========================================
+ * Busca a lista de piscinas ativas e constrói dinamicamente 
+ * as opções (<option>) dentro do elemento <select id="pool-select">.
+ */
 async function populatePoolSelect() {
   try {
+    // 1. Busca a lista atualizada de piscinas cadastradas de forma assíncrona
     const pools = await getPools(true);
+    // Captura o elemento <select> no HTML
     const select = document.getElementById('pool-select');
+    // Trava de segurança: se o select não for encontrado no DOM, encerra a função
     if (!select) return;
 
+    // 2. Transforma o array de piscinas em elementos HTML <option> e injeta no <select>
     select.innerHTML = pools.map((pool, idx) => `
       <option value="${idx}">${pool.name} (${pool.size})</option>
     `).join('');
+    // 3. Mantém a seleção da piscina atual sincronizada
     if (pools.length > 0) {
+      // Garante que o índice da piscina ativa não seja maior do que a quantidade de piscinas disponíveis
       currentPool = Math.min(currentPool, pools.length - 1);
+      // Define a opção visivelmente selecionada no dropdown
       select.value = currentPool;
     }
   } catch (error) {
+    // Registra falhas de comunicação/busca sem interromper o funcionamento do app
     console.error('Falha ao carregar as piscinas', error);
   }
 }
@@ -271,11 +302,26 @@ async function bootApp() {
   }, 30_000);
 }
 
-
+/**
+ * ==========================================
+ * CONTROLE DE FORMULÁRIOS E EXPOSIÇÃO GLOBAL
+ * ==========================================
+ * Alterna a visibilidade entre as abas/formulários de Login e Cadastro.
+ */
 function toggleForm(which) {
+  // Se 'which' for igual a 'login', limpa o display para mostrar o formulário; se não, esconde com 'none'
   document.getElementById('form-login').style.display = which === 'login' ? '' : 'none';
+  // Se 'which' for igual a 'register', exibe o formulário de cadastro; caso contrário, oculta
   document.getElementById('form-register').style.display = which === 'register' ? '' : 'none';
 }
 
+/**
+ * =========================================
+ * EXPORTAÇÃO PARA O ESCOPO GLOBAL (WINDOW)
+ * =========================================
+ * Por estarmos utilizando módulos do ES6 (type="module"), as funções deste arquivo
+ * ficam isoladas por padrão. Atribuí-las ao 'window' permite que o HTML consiga 
+ * executá-las diretamente em eventos de clique (ex: onclick="doLogin()").
+ */
 window.doLogin = doLogin;
 window.toggleForm = toggleForm;
